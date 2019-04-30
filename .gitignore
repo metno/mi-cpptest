@@ -1,0 +1,4 @@
+/debian/debhelper-build-stamp
+/debian/files
+/debian/libmi-cpptest-dev.*
+/debian/libmi-cpptest-dev/

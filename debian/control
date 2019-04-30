@@ -1,0 +1,15 @@
+Source: mi-cpptest
+Priority: optional
+Maintainer: MET Norway <diana@met.no>
+Build-Depends:  debhelper (>= 9),
+ cmake,
+Standards-Version: 3.9.6
+Section: libs
+
+Package: libmi-cpptest-dev
+Section: libdevel
+Architecture: any
+Depends: ${shlibs:Depends},
+ ${misc:Depends}
+Description: MET Norway c++ unit test library
+ A small unit test library.
