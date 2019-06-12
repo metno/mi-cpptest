@@ -151,14 +151,13 @@ bool run_tests(size_t npatterns, char* patterns[])
     for (const registered_test& rt : registered_tests()) {
         test_number += 1;
 
-        TestStatus status = FAIL;
+        TestStatus status = use_default ? FAIL : SKIP;
         std::string message;
 
         std::smatch filter_match;
         for (const test_filter& tf : filters) {
             if (std::regex_match(rt.name, filter_match, tf.regex)) {
-                if (tf.exclusive)
-                    status = SKIP;
+                status = tf.exclusive ? SKIP : FAIL;
                 break;
             }
         }
