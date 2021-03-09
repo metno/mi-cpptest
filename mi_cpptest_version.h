@@ -32,7 +32,7 @@
 
 #define MI_CPPTEST_VERSION_MAJOR 0
 #define MI_CPPTEST_VERSION_MINOR 1
-#define MI_CPPTEST_VERSION_PATCH 0
+#define MI_CPPTEST_VERSION_PATCH 1
 
 #define MI_CPPTEST_VERSION_INT(major,minor,patch) \
     (1000000*major + 1000*minor + patch)
