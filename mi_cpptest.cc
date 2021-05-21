@@ -1,7 +1,7 @@
 /*
   mi-cpptest
 
-  Copyright (C) 2019 met.no
+  Copyright (C) 2019-2021 met.no
 
   Contact information:
   Norwegian Meteorological Institute
@@ -37,11 +37,10 @@
 
 namespace {
 
-typedef void (*test_function_t)();
 struct registered_test {
     std::string name;
-    test_function_t test;
-    void operator()() const { test(); }
+    miutil::cpptest::test_function_t test;
+    void operator()(miutil::cpptest::test_recorder *tr) const { test(tr); }
 };
 
 struct test_filter {
@@ -76,6 +75,23 @@ std::string yaml_escape(const std::string& text)
 namespace miutil {
 namespace cpptest {
 
+void test_recorder::record(const char *file, int line,
+                           const std::string &note) {
+  std::ostringstream msg;
+  if (line >= 0)
+    msg << "failed in " << file << ":" << line;
+  if (!note.empty()) {
+    if (line >= 0)
+      msg << ' ';
+    msg << note;
+  }
+  messages_.push_back(msg.str());
+}
+
+test_status test_recorder::status() const {
+  return messages_.empty() ? OK : FAIL;
+}
+
 typedef std::vector<registered_test> registered_test_v;
 
 registered_test_v& registered_tests()
@@ -92,38 +108,26 @@ bool check_close(double a, double b, double tol)
     return (d <= aa*tol) && (d <= bb*tol);
 }
 
-void ensure(bool b, const char* file, int lineno)
-{
-    if (!b)
-        throw test_failure(file, lineno);
-}
-
 bool register_test(const char* name, test_function_t tf)
 {
     registered_tests().push_back(registered_test {name, tf});
     return true;
 }
 
-enum TestStatus {
-    OK = 0,
-    FAIL,
-    SKIP
-};
-
-void write_test_status(std::ostream& out, TestStatus status, size_t number, const registered_test& rt, const std::string& message)
-{
-    if (status == FAIL)
-        out << "not ";
-    out << "ok " << number;
-    out << ' ' << rt.name;
-    if (status == SKIP)
-        out << " # SKIP";
-    out << std::endl;
-    if (!message.empty()) {
-        out << " ---" << std::endl
-            << " message: \"" << yaml_escape(message) << '"' << std::endl
-            << " ..." << std::endl;
-    }
+void write_test_status(std::ostream &out, test_status status, size_t number,
+                       const registered_test &rt, const std::string &message) {
+  if (status == FAIL)
+    out << "not ";
+  out << "ok " << number;
+  out << ' ' << rt.name;
+  if (status == SKIP)
+    out << " # SKIP";
+  out << std::endl;
+  if (!message.empty()) {
+    out << " ---" << std::endl
+        << " message: \"" << yaml_escape(message) << '"' << std::endl
+        << " ..." << std::endl;
+  }
 }
 
 bool run_tests(size_t npatterns, char* patterns[])
@@ -151,7 +155,7 @@ bool run_tests(size_t npatterns, char* patterns[])
     for (const registered_test& rt : registered_tests()) {
         test_number += 1;
 
-        TestStatus status = use_default ? FAIL : SKIP;
+        test_status status = use_default ? FAIL : SKIP;
         std::string message;
 
         std::smatch filter_match;
@@ -163,20 +167,31 @@ bool run_tests(size_t npatterns, char* patterns[])
         }
 
         if (status != SKIP) {
-            try {
-                rt();
-                status = OK;
-            } catch (const test_failure& tf) {
-                std::ostringstream msg;
-                msg << "failed in " << tf.file() << ":" << tf.lineno();
-                message = msg.str();
-            } catch (std::exception& e) {
-                message = "uncaught exception: " + std::string(e.what());
-            } catch (...) {
-                message = "uncaught exception";
+          test_recorder tr;
+          try {
+            rt(&tr);
+          } catch (const test_failure &tf) {
+            // recorded in test_recorder::fail
+            // tr.record(tf.file(), tf.line(), tf.message());
+          } catch (std::exception &e) {
+            tr.record("", -1, "uncaught exception: " + std::string(e.what()));
+          } catch (...) {
+            tr.record("", -1, "uncaught exception");
+          }
+          status = tr.status();
+          if (status != OK) {
+            all_passed = false;
+
+            std::ostringstream msg;
+            bool first = true;
+            for (const auto &m : tr.messages()) {
+              if (!first)
+                msg << '\n';
+              msg << m;
+              first = false;
             }
-            if (status != OK)
-                all_passed = false;
+            message = msg.str();
+          }
         }
         write_test_status(std::cout, status, test_number, rt, message);
     }

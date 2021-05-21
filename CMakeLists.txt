@@ -1,6 +1,6 @@
 # mi-cpptest
 #
-# Copyright (C) 2019 met.no
+# Copyright (C) 2019-2021 met.no
 #
 # Contact information:
 # Norwegian Meteorological Institute
@@ -77,7 +77,8 @@ IF(MI_CPPTEST_MASTER_PROJECT)
     ENDIF()
   ENDFOREACH()
 
-  ENABLE_TESTING() # there are no tests, currently, but we want a "test" target
+  ENABLE_TESTING()
+  ADD_SUBDIRECTORY(test)
 
   INSTALL(
     TARGETS mi-cpptest mi-cpptest-main
@@ -110,5 +111,4 @@ IF(MI_CPPTEST_MASTER_PROJECT)
     FILES mi-cpptest-config.cmake "${CMAKE_CURRENT_BINARY_DIR}/mi-cpptest-config-version.cmake"
     DESTINATION "${MI_CPPTEST_CMAKE_DIR}"
   )
-
 ENDIF(MI_CPPTEST_MASTER_PROJECT)
