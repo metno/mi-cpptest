@@ -27,6 +27,7 @@
 
 SET(CC_TESTS
   test_with_fixture
+  test_basic
 )
 
 FOREACH(T ${CC_TESTS})

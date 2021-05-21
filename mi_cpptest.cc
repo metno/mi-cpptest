@@ -90,6 +90,10 @@ std::string strip_common_prefix(const std::string &from,
 namespace miutil {
 namespace cpptest {
 
+void mi_cpptest_stringify_missing(std::ostream &out) {
+  out << "???";
+}
+
 std::string test_recorder::file_prefix_;
 
 void test_recorder::record(const char *file, int line,
@@ -116,14 +120,6 @@ registered_test_v& registered_tests()
 {
     static registered_test_v tests;
     return tests;
-}
-
-bool check_close(double a, double b, double tol)
-{
-    if (a == b)
-        return true;
-    const double d = std::abs(a - b), aa = std::abs(a), bb = std::abs(b);
-    return (d <= aa*tol) && (d <= bb*tol);
 }
 
 bool register_test(const char* name, test_function_t tf)
