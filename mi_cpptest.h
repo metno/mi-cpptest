@@ -165,21 +165,6 @@ bool register_test(const char* name, test_function_t tf);
 bool run_tests(size_t npatterns, char* patterns[]);
 bool run_tests_with_prefix(int argc, char *args[]);
 
-template<class A>
-struct equal_to {
-    bool operator()(const A& a, const A&b) const { return std::equal_to<A>()(a, b); }
-};
-
-template<>
-struct equal_to<const char* const> {
-    bool operator()(const std::string& a, const std::string& b) const { return a == b; }
-};
-
-template<class A>
-struct not_equal_to {
-    bool operator()(const A& a, const A&b) const { return !equal_to<A>()(a, b); }
-};
-
 template <class C> struct is_close {
   bool operator()(const C &a, const C &b, const C &tol) const {
     if (a == b)
@@ -247,37 +232,37 @@ template <class C> struct is_near {
   do {                                                                         \
     const auto xx = (x);                                                       \
     const auto yy = (y);                                                       \
-    const auto oper = op<decltype(xx)>{};                                      \
-    MI_CPPTEST___RECORD(fatal, oper(xx, yy),                                   \
+    const auto ok = xx op yy;                                      \
+    MI_CPPTEST___RECORD(fatal, ok,                                   \
                         #op " failed for " #x "="                              \
                             << miutil::cpptest::stringify(xx)                  \
                             << " and " #y "="                                  \
                             << miutil::cpptest::stringify(yy));                \
   } while (0)
 #define MI_CPPTEST_REQUIRE_EQ(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, miutil::cpptest::equal_to)
+  MI_CPPTEST___RECORD_OP2(true, x, y, ==)
 #define MI_CPPTEST_CHECK_EQ(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, miutil::cpptest::equal_to)
+  MI_CPPTEST___RECORD_OP2(false, x, y, ==)
 #define MI_CPPTEST_REQUIRE_NE(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, miutil::cpptest::not_equal_to)
+  MI_CPPTEST___RECORD_OP2(true, x, y, !=)
 #define MI_CPPTEST_CHECK_NE(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, miutil::cpptest::not_equal_to)
+  MI_CPPTEST___RECORD_OP2(false, x, y, !=)
 #define MI_CPPTEST_REQUIRE_GT(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, std::greater)
+  MI_CPPTEST___RECORD_OP2(true, x, y, >)
 #define MI_CPPTEST_CHECK_GT(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, std::greater)
+  MI_CPPTEST___RECORD_OP2(false, x, y, >)
 #define MI_CPPTEST_REQUIRE_GE(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, std::greater_equal)
+  MI_CPPTEST___RECORD_OP2(true, x, y, >=)
 #define MI_CPPTEST_CHECK_GE(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, std::greater_equal)
+  MI_CPPTEST___RECORD_OP2(false, x, y, >=)
 #define MI_CPPTEST_REQUIRE_LT(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, std::less)
+  MI_CPPTEST___RECORD_OP2(true, x, y, <)
 #define MI_CPPTEST_CHECK_LT(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, std::less)
+  MI_CPPTEST___RECORD_OP2(false, x, y, <)
 #define MI_CPPTEST_REQUIRE_LE(x, y)                                            \
-  MI_CPPTEST___RECORD_OP2(true, x, y, std::less_equal)
+  MI_CPPTEST___RECORD_OP2(true, x, y, <=)
 #define MI_CPPTEST_CHECK_LE(x, y)                                              \
-  MI_CPPTEST___RECORD_OP2(false, x, y, std::less_equal)
+  MI_CPPTEST___RECORD_OP2(false, x, y, <=)
 
 #define MI_CPPTEST___RECORD_OP3(fatal, x, y, z, op)                            \
   do {                                                                         \
