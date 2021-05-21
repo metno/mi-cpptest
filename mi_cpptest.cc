@@ -54,20 +54,22 @@ char hexchar(unsigned int i)
     return hexchars[i & 0xF];
 }
 
-std::string yaml_escape(const std::string& text)
-{
-    std::ostringstream escaped;
-    for (char ch : text) {
-        if (ch < ' ' && ch != '\n' && ch != 9) {
-            unsigned int u = (unsigned int)ch;
-            escaped << "\\x" << hexchar(u >> 4) << hexchar(u);
-            continue;
-        }
-        if (ch == '"' || ch == '\\')
-            escaped << '\\';
-        escaped << ch;
+void yaml_escaped_block(std::ostream &out, const std::string &text,
+                        const std::string &indent) {
+  out << indent;
+  for (char ch : text) {
+    if (ch == '\n') {
+      out << '\n' << indent;
+    } else if (ch < ' ' && ch != 9) {
+      unsigned int u = (unsigned int)ch;
+      out << "\\x" << hexchar(u >> 4) << hexchar(u);
+    } else if (ch == '"' || ch == '\\') {
+      out << '\\' << ch;
+    } else {
+      out << ch;
     }
-    return escaped.str();
+  }
+  out << '\n';
 }
 
 } // namespace
@@ -124,9 +126,9 @@ void write_test_status(std::ostream &out, test_status status, size_t number,
     out << " # SKIP";
   out << std::endl;
   if (!message.empty()) {
-    out << " ---" << std::endl
-        << " message: \"" << yaml_escape(message) << '"' << std::endl
-        << " ..." << std::endl;
+    out << " ---" << std::endl << " message: |" << std::endl;
+    yaml_escaped_block(out, message, "   ");
+    out << " ..." << std::endl;
   }
 }
 
