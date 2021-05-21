@@ -72,16 +72,32 @@ void yaml_escaped_block(std::ostream &out, const std::string &text,
   out << '\n';
 }
 
+std::string strip_common_prefix(const std::string &from,
+                                const std::string &prefix,
+                                const std::string &strip) {
+  size_t common = 0;
+  const size_t max = std::min(from.size(), prefix.size());
+  while (common < max && from[common] == prefix[common])
+    ++common;
+  const auto idx = from.find_first_not_of(strip, common);
+  if (idx != std::string::npos)
+    common = idx;
+  return from.substr(common);
+}
+
 } // namespace
 
 namespace miutil {
 namespace cpptest {
 
+std::string test_recorder::file_prefix_;
+
 void test_recorder::record(const char *file, int line,
                            const std::string &note) {
   std::ostringstream msg;
-  if (line >= 0)
-    msg << "failed in " << file << ":" << line;
+  if (line >= 0) {
+    msg << strip_common_prefix(file, file_prefix_, "/:.") << ":" << line;
+  }
   if (!note.empty()) {
     if (line >= 0)
       msg << ' ';
@@ -198,6 +214,11 @@ bool run_tests(size_t npatterns, char* patterns[])
         write_test_status(std::cout, status, test_number, rt, message);
     }
     return all_passed;
+}
+
+bool run_tests_with_prefix(int argc, char *args[]) {
+  test_recorder::set_file_prefix(args[0]);
+  return run_tests(argc - 1, args + 1);
 }
 
 } // namespace cpptest

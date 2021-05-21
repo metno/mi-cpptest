@@ -51,7 +51,12 @@ public:
   test_status status() const;
   const std::vector<std::string> &messages() const { return messages_; }
 
+  static void set_file_prefix(const std::string &prefix) {
+    file_prefix_ = prefix;
+  }
+
 private:
+  static std::string file_prefix_;
   std::vector<std::string> messages_;
 };
 
@@ -77,6 +82,7 @@ typedef void (*test_function_t)(test_recorder *);
 bool register_test(const char* name, test_function_t tf);
 
 bool run_tests(size_t npatterns, char* patterns[]);
+bool run_tests_with_prefix(int argc, char *args[]);
 
 bool check_close(double a, double b, double tol);
 
