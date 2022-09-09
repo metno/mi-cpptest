@@ -1,7 +1,7 @@
 /*
   mi-cpptest
 
-  Copyright (C) 2019-2021 met.no
+  Copyright (C) 2021 met.no
 
   Contact information:
   Norwegian Meteorological Institute
@@ -27,16 +27,24 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef MI_CPPTEST_VERSION_H
-#define MI_CPPTEST_VERSION_H
 
-#define MI_CPPTEST_VERSION_MAJOR 0
-#define MI_CPPTEST_VERSION_MINOR 2
-#define MI_CPPTEST_VERSION_PATCH 0
+#include "mi_cpptest.h"
 
-#define MI_CPPTEST_VERSION_INT(major,minor,patch) \
-    (1000000*major + 1000*minor + patch)
-#define MI_CPPTEST_VERSION_CURRENT_INT \
-    MI_CPPTEST_VERSION_INT(MI_CPPTEST_VERSION_MAJOR, MI_CPPTEST_VERSION_MINOR, MI_CPPTEST_VERSION_PATCH)
+namespace {
+int up_ = 0, down_ = 0;
 
-#endif // MI_CPPTEST_VERSION_H
+struct fixture : miutil::cpptest::test_fixture {
+  void set_up() override { up_ += 1; }
+  void tear_down() override { down_ += 1; }
+};
+} // namespace
+
+MI_CPPTEST_FIXTURE_TEST_CASE(test_fixture, fixture) {
+  MI_CPPTEST_CHECK_EQ(1, up_);
+  MI_CPPTEST_CHECK_EQ(0, down_);
+}
+
+MI_CPPTEST_TEST_CASE(test_after_fixture) {
+  MI_CPPTEST_CHECK_EQ(1, up_);
+  MI_CPPTEST_CHECK_EQ(1, down_);
+}

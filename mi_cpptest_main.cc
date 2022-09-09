@@ -1,7 +1,7 @@
 /*
   mi-cpptest
 
-  Copyright (C) 2019 met.no
+  Copyright (C) 2019-2021 met.no
 
   Contact information:
   Norwegian Meteorological Institute

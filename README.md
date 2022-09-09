@@ -4,9 +4,12 @@ This library is a intended as a minuscule unit-test library for C++11
 and later:
 
 - it should fail if a test fails
-- it does not try to print a message explaining the failure
-- it tries to print TAP output, but at present, that only works if
-  there is no output from the test cases
+- it tries to print a message explaining the failure,
+  - using `void mi_cpptest_stringify(std::ostream&, const T&)`, if defined,
+  - else using `std::ostream& operator<<(std::ostream&, const T&)`, if defined,
+  - else using a standard text
+  to format values
+- it tries to print TAP output
 - it allows selecting which tests to run
 
 The library has no dependencies beyond the standard C++ library.
@@ -29,5 +32,5 @@ In both cases, link to `mi-cpptest` or `mi-cpptest-main`.
 
 ## Use without CMake
 
-As the library consists of only 4 code files, 2 of which tiny, it
-should be easy to use with other build systems.
+As the library consists of a few files, it should be easy to use with
+other build systems.

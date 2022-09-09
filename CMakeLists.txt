@@ -1,6 +1,6 @@
 # mi-cpptest
 #
-# Copyright (C) 2019 met.no
+# Copyright (C) 2019-2021 met.no
 #
 # Contact information:
 # Norwegian Meteorological Institute
@@ -26,7 +26,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 PROJECT(mi-cpptest LANGUAGES CXX)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 SET(MI_CPPTEST_MASTER_PROJECT OFF)
 IF(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
@@ -59,6 +59,10 @@ TARGET_INCLUDE_DIRECTORIES(mi-cpptest
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+SET_PROPERTY(TARGET mi-cpptest
+  PROPERTY POSITION_INDEPENDENT_CODE ON
+)
+
 ADD_LIBRARY(mi-cpptest-main STATIC
   mi_cpptest_main.cc
 )
@@ -66,6 +70,10 @@ ADD_LIBRARY(mi-cpptest-main STATIC
 TARGET_LINK_LIBRARIES(mi-cpptest-main
   PUBLIC
   mi-cpptest
+)
+
+SET_PROPERTY(TARGET mi-cpptest-main
+  PROPERTY POSITION_INDEPENDENT_CODE ON
 )
 
 IF(MI_CPPTEST_MASTER_PROJECT)
@@ -77,7 +85,8 @@ IF(MI_CPPTEST_MASTER_PROJECT)
     ENDIF()
   ENDFOREACH()
 
-  ENABLE_TESTING() # there are no tests, currently, but we want a "test" target
+  ENABLE_TESTING()
+  ADD_SUBDIRECTORY(test)
 
   INSTALL(
     TARGETS mi-cpptest mi-cpptest-main
@@ -110,5 +119,4 @@ IF(MI_CPPTEST_MASTER_PROJECT)
     FILES mi-cpptest-config.cmake "${CMAKE_CURRENT_BINARY_DIR}/mi-cpptest-config-version.cmake"
     DESTINATION "${MI_CPPTEST_CMAKE_DIR}"
   )
-
 ENDIF(MI_CPPTEST_MASTER_PROJECT)

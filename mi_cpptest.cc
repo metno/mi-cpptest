@@ -1,7 +1,7 @@
 /*
   mi-cpptest
 
-  Copyright (C) 2019 met.no
+  Copyright (C) 2019-2021 met.no
 
   Contact information:
   Norwegian Meteorological Institute
@@ -37,11 +37,10 @@
 
 namespace {
 
-typedef void (*test_function_t)();
 struct registered_test {
     std::string name;
-    test_function_t test;
-    void operator()() const { test(); }
+    miutil::cpptest::test_function_t test;
+    void operator()(miutil::cpptest::test_recorder *tr) const { test(tr); }
 };
 
 struct test_filter {
@@ -55,26 +54,65 @@ char hexchar(unsigned int i)
     return hexchars[i & 0xF];
 }
 
-std::string yaml_escape(const std::string& text)
-{
-    std::ostringstream escaped;
-    for (char ch : text) {
-        if (ch < ' ' && ch != '\n' && ch != 9) {
-            unsigned int u = (unsigned int)ch;
-            escaped << "\\x" << hexchar(u >> 4) << hexchar(u);
-            continue;
-        }
-        if (ch == '"' || ch == '\\')
-            escaped << '\\';
-        escaped << ch;
+void yaml_escaped_block(std::ostream &out, const std::string &text,
+                        const std::string &indent) {
+  out << indent;
+  for (char ch : text) {
+    if (ch == '\n') {
+      out << '\n' << indent;
+    } else if (ch < ' ' && ch != 9) {
+      unsigned int u = (unsigned int)ch;
+      out << "\\x" << hexchar(u >> 4) << hexchar(u);
+    } else if (ch == '"' || ch == '\\') {
+      out << '\\' << ch;
+    } else {
+      out << ch;
     }
-    return escaped.str();
+  }
+  out << '\n';
+}
+
+std::string strip_common_prefix(const std::string &from,
+                                const std::string &prefix,
+                                const std::string &strip) {
+  size_t common = 0;
+  const size_t max = std::min(from.size(), prefix.size());
+  while (common < max && from[common] == prefix[common])
+    ++common;
+  const auto idx = from.find_first_not_of(strip, common);
+  if (idx != std::string::npos)
+    common = idx;
+  return from.substr(common);
 }
 
 } // namespace
 
 namespace miutil {
 namespace cpptest {
+
+void mi_cpptest_stringify_missing(std::ostream &out) {
+  out << "???";
+}
+
+std::string test_recorder::file_prefix_;
+
+void test_recorder::record(const char *file, int line,
+                           const std::string &note) {
+  std::ostringstream msg;
+  if (line >= 0) {
+    msg << strip_common_prefix(file, file_prefix_, "/:.") << ":" << line;
+  }
+  if (!note.empty()) {
+    if (line >= 0)
+      msg << ' ';
+    msg << note;
+  }
+  messages_.push_back(msg.str());
+}
+
+test_status test_recorder::status() const {
+  return messages_.empty() ? OK : FAIL;
+}
 
 typedef std::vector<registered_test> registered_test_v;
 
@@ -84,46 +122,26 @@ registered_test_v& registered_tests()
     return tests;
 }
 
-bool check_close(double a, double b, double tol)
-{
-    if (a == b)
-        return true;
-    const double d = std::abs(a - b), aa = std::abs(a), bb = std::abs(b);
-    return (d <= aa*tol) && (d <= bb*tol);
-}
-
-void ensure(bool b, const char* file, int lineno)
-{
-    if (!b)
-        throw test_failure(file, lineno);
-}
-
 bool register_test(const char* name, test_function_t tf)
 {
     registered_tests().push_back(registered_test {name, tf});
     return true;
 }
 
-enum TestStatus {
-    OK = 0,
-    FAIL,
-    SKIP
-};
-
-void write_test_status(std::ostream& out, TestStatus status, size_t number, const registered_test& rt, const std::string& message)
-{
-    if (status == FAIL)
-        out << "not ";
-    out << "ok " << number;
-    out << ' ' << rt.name;
-    if (status == SKIP)
-        out << " # SKIP";
-    out << std::endl;
-    if (!message.empty()) {
-        out << " ---" << std::endl
-            << " message: \"" << yaml_escape(message) << '"' << std::endl
-            << " ..." << std::endl;
-    }
+void write_test_status(std::ostream &out, test_status status, size_t number,
+                       const registered_test &rt, const std::string &message) {
+  if (status == FAIL)
+    out << "not ";
+  out << "ok " << number;
+  out << ' ' << rt.name;
+  if (status == SKIP)
+    out << " # SKIP";
+  out << std::endl;
+  if (!message.empty()) {
+    out << " ---" << std::endl << " message: |" << std::endl;
+    yaml_escaped_block(out, message, "   ");
+    out << " ..." << std::endl;
+  }
 }
 
 bool run_tests(size_t npatterns, char* patterns[])
@@ -151,7 +169,7 @@ bool run_tests(size_t npatterns, char* patterns[])
     for (const registered_test& rt : registered_tests()) {
         test_number += 1;
 
-        TestStatus status = use_default ? FAIL : SKIP;
+        test_status status = use_default ? FAIL : SKIP;
         std::string message;
 
         std::smatch filter_match;
@@ -163,24 +181,40 @@ bool run_tests(size_t npatterns, char* patterns[])
         }
 
         if (status != SKIP) {
-            try {
-                rt();
-                status = OK;
-            } catch (const test_failure& tf) {
-                std::ostringstream msg;
-                msg << "failed in " << tf.file() << ":" << tf.lineno();
-                message = msg.str();
-            } catch (std::exception& e) {
-                message = "uncaught exception: " + std::string(e.what());
-            } catch (...) {
-                message = "uncaught exception";
+          test_recorder tr;
+          try {
+            rt(&tr);
+          } catch (const test_failure &tf) {
+            // recorded in test_recorder::fail
+            // tr.record(tf.file(), tf.line(), tf.message());
+          } catch (std::exception &e) {
+            tr.record("", -1, "uncaught exception: " + std::string(e.what()));
+          } catch (...) {
+            tr.record("", -1, "uncaught exception");
+          }
+          status = tr.status();
+          if (status != OK) {
+            all_passed = false;
+
+            std::ostringstream msg;
+            bool first = true;
+            for (const auto &m : tr.messages()) {
+              if (!first)
+                msg << '\n';
+              msg << m;
+              first = false;
             }
-            if (status != OK)
-                all_passed = false;
+            message = msg.str();
+          }
         }
         write_test_status(std::cout, status, test_number, rt, message);
     }
     return all_passed;
+}
+
+bool run_tests_with_prefix(int argc, char *args[]) {
+  test_recorder::set_file_prefix(args[0]);
+  return run_tests(argc - 1, args + 1);
 }
 
 } // namespace cpptest
